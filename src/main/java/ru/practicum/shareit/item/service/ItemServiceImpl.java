@@ -103,11 +103,13 @@ public class ItemServiceImpl implements ItemService {
 
         String enquiry = text.toLowerCase();
         List<ItemDto> itemsDto = new ArrayList<>();
-        List<Item> items = itemStorage.searchItem(enquiry);
+        if(!enquiry.isEmpty()) {
+            List<Item> items = itemStorage.searchItem(enquiry);
 
-        if (!items.isEmpty()) {
-            for (Item i : items) {
-                itemsDto.add(itemMapper.toItemDto(i));
+            if (!items.isEmpty()) {
+                for (Item i : items) {
+                    itemsDto.add(itemMapper.toItemDto(i));
+                }
             }
         }
         return itemsDto;
