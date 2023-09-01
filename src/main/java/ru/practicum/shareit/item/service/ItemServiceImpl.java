@@ -35,7 +35,7 @@ public class ItemServiceImpl implements ItemService {
 
         return itemMapper.toItemDto(
                 Optional.of(
-                        itemStorage.createItem(item))
+                                itemStorage.createItem(item))
                         .orElseThrow(() ->
                                 new ErrorException("In process of adding Item error was acquired")));
     }
@@ -62,7 +62,7 @@ public class ItemServiceImpl implements ItemService {
 
             return itemMapper.toItemDto(
                     Optional.of(
-                            itemStorage.updateItem(item))
+                                    itemStorage.updateItem(item))
                             .orElseThrow(() ->
                                     new ErrorException("In process of updating Item error was acquired")));
         } else {
@@ -77,7 +77,7 @@ public class ItemServiceImpl implements ItemService {
 
         return itemMapper.toItemDto(
                 Optional.of(
-                        itemStorage.getItem(id))
+                                itemStorage.getItem(id))
                         .orElseThrow(() ->
                                 new ErrorException("In process of getting Item error was acquired")));
     }
@@ -103,7 +103,7 @@ public class ItemServiceImpl implements ItemService {
 
         String enquiry = text.toLowerCase();
         List<ItemDto> itemsDto = new ArrayList<>();
-        if(!enquiry.isEmpty()) {
+        if (!enquiry.isEmpty()) {
             List<Item> items = itemStorage.searchItem(enquiry);
 
             if (!items.isEmpty()) {
