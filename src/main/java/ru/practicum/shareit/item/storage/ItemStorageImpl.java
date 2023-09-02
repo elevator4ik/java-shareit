@@ -32,9 +32,9 @@ public class ItemStorageImpl implements ItemStorage {
 
     @Override
     public Item getItem(int id) {
-
-        if (itemStorage.containsKey(id)) {
-            return itemStorage.get(id);
+        Item item = itemStorage.get(id);
+        if (item != null) {
+            return item;
         } else {
             throw new NotFoundException("Item with id " + id + " not found");
         }

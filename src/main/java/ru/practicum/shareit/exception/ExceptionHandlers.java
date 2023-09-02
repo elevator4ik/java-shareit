@@ -15,21 +15,21 @@ public class ExceptionHandlers {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handleNotFoundException(final NotFoundException e) {
-        log.error("Catch NotFoundException: \n" + e.getMessage(), e);
+        log.error("Catch NotFoundException: \n {}", e.getMessage());
         return Map.of("error", e.getMessage());
     }
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> handleNBadRequestException(final ValidationException e) {
-        log.error("Catch ValidationException: \n" + e.getMessage(), e);
+        log.error("Catch ValidationException: \n {}", e.getMessage());
         return Map.of("error", e.getMessage());
     }
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Map<String, String> handleErrorException(final ErrorException e) {
-        log.error("Catch ErrorException: \n" + e.getMessage(), e);
+        log.error("Catch ErrorException: \n {}", e.getMessage());
         return Map.of("error", e.getMessage());
     }
 }

@@ -3,16 +3,13 @@ package ru.practicum.shareit.user.service;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.practicum.shareit.exception.ErrorException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.model.UserMapper;
 import ru.practicum.shareit.user.storage.UserStorage;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @AllArgsConstructor
@@ -29,13 +26,7 @@ public class UserServiceImpl implements UserService {
 
         List<User> users = userStorage.getAllUsers();
         if (users != null) {
-            List<UserDto> usersDto = new ArrayList<>();
-            UserDto userDto;
-            for (User u : users) {
-                userDto = userMapper.toUserDto(u);
-                usersDto.add(userDto);
-            }
-            return usersDto;
+            return userMapper.toUserDtoList(users);
         } else {
             throw new NotFoundException("Storage is empty");
         }
@@ -46,10 +37,7 @@ public class UserServiceImpl implements UserService {
 
         log.info("Start to getting user with id {}", id);
 
-        return userMapper.toUserDto(
-                Optional.of(
-                        userStorage.getUserById(id))
-                        .orElseThrow(() -> new NotFoundException("User not found")));
+        return userMapper.toUserDto(userStorage.getUserById(id));
     }
 
     @Override
@@ -59,11 +47,7 @@ public class UserServiceImpl implements UserService {
 
         User user = userMapper.toUser(userDto);
 
-        return userMapper.toUserDto(
-                Optional.of(
-                        userStorage.add(user))
-                        .orElseThrow(() ->
-                                new ErrorException("In process of saving User error was acquired")));
+        return userMapper.toUserDto(userStorage.add(user));
     }
 
     @Override
@@ -80,11 +64,7 @@ public class UserServiceImpl implements UserService {
             user.setEmail(userDto.getEmail());
         }
 
-        return userMapper.toUserDto(
-                Optional.of(
-                        userStorage.update(user))
-                        .orElseThrow(() ->
-                                new ErrorException("In process of updating User error was acquired")));
+        return userMapper.toUserDto(userStorage.update(user));
     }
 
     @Override

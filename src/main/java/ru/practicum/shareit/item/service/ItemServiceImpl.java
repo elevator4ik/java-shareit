@@ -3,7 +3,6 @@ package ru.practicum.shareit.item.service;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.practicum.shareit.exception.ErrorException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.model.Item;
@@ -14,7 +13,6 @@ import ru.practicum.shareit.user.storage.UserStorage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @AllArgsConstructor
@@ -34,10 +32,7 @@ public class ItemServiceImpl implements ItemService {
         Item item = itemMapper.toItem(itemDto, owner);
 
         return itemMapper.toItemDto(
-                Optional.of(
-                                itemStorage.createItem(item))
-                        .orElseThrow(() ->
-                                new ErrorException("In process of adding Item error was acquired")));
+                itemStorage.createItem(item));
     }
 
     @Override
@@ -61,10 +56,7 @@ public class ItemServiceImpl implements ItemService {
             item.setOwner(user);//если юзер поменял свои данные с момента последнего апдейта итема
 
             return itemMapper.toItemDto(
-                    Optional.of(
-                                    itemStorage.updateItem(item))
-                            .orElseThrow(() ->
-                                    new ErrorException("In process of updating Item error was acquired")));
+                    itemStorage.updateItem(item));
         } else {
             throw new NotFoundException("Not owner try to update Item");
         }
@@ -76,10 +68,7 @@ public class ItemServiceImpl implements ItemService {
         log.info("Start to getting item with id {}", id);
 
         return itemMapper.toItemDto(
-                Optional.of(
-                                itemStorage.getItem(id))
-                        .orElseThrow(() ->
-                                new ErrorException("In process of getting Item error was acquired")));
+                itemStorage.getItem(id));
     }
 
     @Override
@@ -87,13 +76,7 @@ public class ItemServiceImpl implements ItemService {
 
         log.info("Start to getting items of user with id {}", userId);
 
-        List<ItemDto> itemsDto = new ArrayList<>();
-        List<Item> items = itemStorage.getItemsOfUser(userId);
-
-        for (Item i : items) {
-            itemsDto.add(itemMapper.toItemDto(i));
-        }
-        return itemsDto;
+        return itemMapper.toItemDtoList(itemStorage.getItemsOfUser(userId));
     }
 
     @Override
