@@ -28,6 +28,16 @@ public class BookingServiceImpl implements BookingService {
     final BookingRepository bookingRepository;
     final BookingMapper bookingMapper;
 
+    private boolean checkStart(Booking b1, Booking b2) {
+        return b1.getStartBooking().isAfter(b2.getStartBooking()) &
+                b1.getStartBooking().isBefore(b2.getEndBooking());
+    }
+
+    private boolean checkEnd(Booking b1, Booking b2) {
+        return b1.getEndBooking().isAfter(b2.getStartBooking()) &
+                b1.getEndBooking().isBefore(b2.getEndBooking());
+    }
+
     @Override
     public BookingDto addBooking(int userId, BookingInfoDto bookingDto) {
         log.info("Start to create booking for item with id {}.", bookingDto.getItemId());
@@ -39,13 +49,9 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getEndBooking().isAfter(booking.getStartBooking())) {
             if (userId != item.getOwner().getId()) {
                 for (Booking b : item.getBookings()) {
-                    if (booking.getStartBooking().isAfter(b.getStartBooking()) &
-                            booking.getStartBooking().isBefore(b.getEndBooking())) {
-                        if (booking.getEndBooking().isAfter(b.getStartBooking()) &
-                                booking.getEndBooking().isBefore(b.getEndBooking())) {
-                            crossingCheck = true;
-                            break;
-                        }
+                    if (checkStart(booking, b) || checkEnd(booking, b)) {
+                        crossingCheck = true;
+                        break;
                     }
                 }
                 if (crossingCheck) {
