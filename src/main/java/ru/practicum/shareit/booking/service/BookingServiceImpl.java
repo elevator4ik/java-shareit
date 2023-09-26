@@ -40,7 +40,7 @@ public class BookingServiceImpl implements BookingService {
             if (userId != item.getOwner().getId()) {
                 for (Booking b : item.getBookings()) {
                     if (isBetween(b.getStartBooking(), booking.getStartBooking(), booking.getEndBooking()) ||
-                            isBetween(b.getEndBooking(), booking.getStartBooking(), booking.getEndBooking()) ) {
+                            isBetween(b.getEndBooking(), booking.getStartBooking(), booking.getEndBooking())) {
                         crossingCheck = true;
                         break;
                     }
