@@ -4,10 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.NotFoundException;
+import ru.practicum.shareit.user.repository.UserRepository;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.model.UserMapper;
-import ru.practicum.shareit.user.storage.UserStorage;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ import java.util.List;
 @Slf4j
 public class UserServiceImpl implements UserService {
 
-    final UserStorage userStorage;
+    final UserRepository userRepository;
     final UserMapper userMapper;
 
     @Override
@@ -24,11 +24,11 @@ public class UserServiceImpl implements UserService {
 
         log.info("Start to getting all users");
 
-        List<User> users = userStorage.getAllUsers();
-        if (users != null) {
+        List<User> users = userRepository.findAll();
+        if (!users.isEmpty()) {
             return userMapper.toUserDtoList(users);
         } else {
-            throw new NotFoundException("Storage is empty");
+            throw new NotFoundException("Repository is empty");
         }
     }
 
@@ -37,7 +37,8 @@ public class UserServiceImpl implements UserService {
 
         log.info("Start to getting user with id {}", id);
 
-        return userMapper.toUserDto(userStorage.getUserById(id));
+        return userMapper.toUserDto(
+                getUserFromRepo(id));
     }
 
     @Override
@@ -47,7 +48,7 @@ public class UserServiceImpl implements UserService {
 
         User user = userMapper.toUser(userDto);
 
-        return userMapper.toUserDto(userStorage.add(user));
+        return userMapper.toUserDto(userRepository.saveAndFlush(user));
     }
 
     @Override
@@ -55,7 +56,7 @@ public class UserServiceImpl implements UserService {
 
         log.info("Start to updating user with id {}", id);
 
-        User user = userMapper.toUser(getUserById(id));
+        User user = getUserFromRepo(id);
 
         if (userDto.getName() != null) {
             user.setName(userDto.getName());
@@ -64,7 +65,7 @@ public class UserServiceImpl implements UserService {
             user.setEmail(userDto.getEmail());
         }
 
-        return userMapper.toUserDto(userStorage.update(user));
+        return userMapper.toUserDto(userRepository.saveAndFlush(user));
     }
 
     @Override
@@ -72,6 +73,11 @@ public class UserServiceImpl implements UserService {
 
         log.info("Start to deleting user with id {}", id);
 
-        userStorage.delete(id);
+        userRepository.deleteById(id);
+    }
+
+    private User getUserFromRepo(int id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found"));
     }
 }

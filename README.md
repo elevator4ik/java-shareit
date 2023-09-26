@@ -1,2 +1,5 @@
 # java-shareit
-Template repository for Shareit project.
+
+Схема БД
+
+![Схема БД](ShareItDiagramm.png)

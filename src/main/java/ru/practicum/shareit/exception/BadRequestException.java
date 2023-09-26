@@ -7,10 +7,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public class NotFoundException extends RuntimeException {
+public class BadRequestException extends RuntimeException {
 
-    public NotFoundException(String massage) {
+    public BadRequestException(String massage) {
         super(massage);
     }
-
 }
