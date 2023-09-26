@@ -28,5 +28,5 @@ public class Comment {
     @JoinColumn(name = "author_id")
     private User author;
     @Column(name = "item_id", nullable = false)
-    private Integer item_id;
+    private Integer itemId;
 }
