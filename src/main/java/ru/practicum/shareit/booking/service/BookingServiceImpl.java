@@ -39,12 +39,13 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getEndBooking().isAfter(booking.getStartBooking())) {
             if (userId != item.getOwner().getId()) {
                 for (Booking b : item.getBookings()) {
-                    if ((booking.getStartBooking().isAfter(b.getStartBooking()) &
-                            booking.getStartBooking().isBefore(b.getEndBooking())) ||
-                            (booking.getEndBooking().isAfter(b.getStartBooking()) &
-                                    booking.getEndBooking().isBefore(b.getEndBooking()))) {
-                        crossingCheck = true;
-                        break;
+                    if (booking.getStartBooking().isAfter(b.getStartBooking()) &
+                            booking.getStartBooking().isBefore(b.getEndBooking())) {
+                        if (booking.getEndBooking().isAfter(b.getStartBooking()) &
+                                booking.getEndBooking().isBefore(b.getEndBooking())) {
+                            crossingCheck = true;
+                            break;
+                        }
                     }
                 }
                 if (crossingCheck) {
@@ -144,7 +145,7 @@ public class BookingServiceImpl implements BookingService {
         if (state.equals(BookingEnum.ALL.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByBookerIdOrderByStartBookingDesc(user.getId()))
+                            bookingRepository.findAllByBookerIdOrderByStartBookingDesc(user.getId()))
                     .orElseThrow(() -> new NotFoundException("Bookings of user with id "
                             + user.getId() + "and param ALL not found."));
             Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
@@ -153,8 +154,8 @@ public class BookingServiceImpl implements BookingService {
         } else if (state.equals(BookingEnum.PAST.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByBookerIdAndEndBookingBeforeOrderByStartBookingDesc(
-                            user.getId(), LocalDateTime.now()))
+                            bookingRepository.findAllByBookerIdAndEndBookingBeforeOrderByStartBookingDesc(
+                                    user.getId(), LocalDateTime.now()))
                     .orElseThrow(() -> new NotFoundException("Bookings of user with id "
                             + user.getId() + "and param PAST not found."));
             Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
@@ -163,8 +164,8 @@ public class BookingServiceImpl implements BookingService {
         } else if (state.equals(BookingEnum.FUTURE.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByBookerIdAndStartBookingAfterOrderByStartBookingDesc(
-                            user.getId(), LocalDateTime.now()))
+                            bookingRepository.findAllByBookerIdAndStartBookingAfterOrderByStartBookingDesc(
+                                    user.getId(), LocalDateTime.now()))
                     .orElseThrow(() -> new NotFoundException("Bookings of user with id "
                             + user.getId() + "and param FUTURE not found."));
             Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
@@ -173,8 +174,8 @@ public class BookingServiceImpl implements BookingService {
         } else if (state.equals(BookingEnum.CURRENT.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByBookerIdAndStartBookingBeforeAndEndBookingAfterOrderByStartBookingDesc(
-                            user.getId(), LocalDateTime.now(), LocalDateTime.now()))
+                            bookingRepository.findAllByBookerIdAndStartBookingBeforeAndEndBookingAfterOrderByStartBookingDesc(
+                                    user.getId(), LocalDateTime.now(), LocalDateTime.now()))
                     .orElseThrow(() -> new NotFoundException("Bookings of user with id "
                             + user.getId() + "and param CURRENT not found."));
             Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
@@ -185,8 +186,8 @@ public class BookingServiceImpl implements BookingService {
                 state.equals(BookingEnum.APPROVED.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByBookerIdAndStatusOrderByStartBookingDesc(
-                            user.getId(), BookingEnum.valueOf(state)))
+                            bookingRepository.findAllByBookerIdAndStatusOrderByStartBookingDesc(
+                                    user.getId(), BookingEnum.valueOf(state)))
                     .orElseThrow(() -> new NotFoundException("Bookings of user with id "
                             + user.getId() + "and param " + state + " not found."));
             Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
@@ -212,7 +213,7 @@ public class BookingServiceImpl implements BookingService {
         if (state.equals(BookingEnum.ALL.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByItemIdInOrderByStartBookingDesc(ids))
+                            bookingRepository.findAllByItemIdInOrderByStartBookingDesc(ids))
                     .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
                             + user.getId() + "and param ALL not found."));
             Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
@@ -222,8 +223,8 @@ public class BookingServiceImpl implements BookingService {
         } else if (state.equals(BookingEnum.PAST.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByItemIdInAndEndBookingBeforeOrderByStartBookingDesc(
-                            ids, LocalDateTime.now()))
+                            bookingRepository.findAllByItemIdInAndEndBookingBeforeOrderByStartBookingDesc(
+                                    ids, LocalDateTime.now()))
                     .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
                             + user.getId() + "and param PAST not found."));
             Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
@@ -233,8 +234,8 @@ public class BookingServiceImpl implements BookingService {
         } else if (state.equals(BookingEnum.FUTURE.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByItemIdInAndStartBookingAfterOrderByStartBookingDesc(
-                            ids, LocalDateTime.now()))
+                            bookingRepository.findAllByItemIdInAndStartBookingAfterOrderByStartBookingDesc(
+                                    ids, LocalDateTime.now()))
                     .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
                             + user.getId() + "and param FUTURE not found."));
             Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
@@ -244,8 +245,8 @@ public class BookingServiceImpl implements BookingService {
         } else if (state.equals(BookingEnum.CURRENT.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByItemIdInAndStartBookingBeforeAndEndBookingAfterOrderByStartBookingDesc(
-                            ids, LocalDateTime.now(), LocalDateTime.now()))
+                            bookingRepository.findAllByItemIdInAndStartBookingBeforeAndEndBookingAfterOrderByStartBookingDesc(
+                                    ids, LocalDateTime.now(), LocalDateTime.now()))
                     .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
                             + user.getId() + "and param CURRENT not found."));
             Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
@@ -256,7 +257,7 @@ public class BookingServiceImpl implements BookingService {
                 state.equals(BookingEnum.APPROVED.toString())) {
 
             bookings = Optional.of(
-                    bookingRepository.findAllByItemIdInAndStatusOrderByStartBookingDesc(ids, BookingEnum.valueOf(state)))
+                            bookingRepository.findAllByItemIdInAndStatusOrderByStartBookingDesc(ids, BookingEnum.valueOf(state)))
                     .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
                             + user.getId() + "and param " + state + " not found."));
             Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
