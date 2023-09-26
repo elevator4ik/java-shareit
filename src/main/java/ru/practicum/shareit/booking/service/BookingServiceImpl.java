@@ -16,6 +16,7 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -28,16 +29,6 @@ public class BookingServiceImpl implements BookingService {
     final BookingRepository bookingRepository;
     final BookingMapper bookingMapper;
 
-    private boolean checkStart(Booking b1, Booking b2) {
-        return b1.getStartBooking().isAfter(b2.getStartBooking()) &
-                b1.getStartBooking().isBefore(b2.getEndBooking());
-    }
-
-    private boolean checkEnd(Booking b1, Booking b2) {
-        return b1.getEndBooking().isAfter(b2.getStartBooking()) &
-                b1.getEndBooking().isBefore(b2.getEndBooking());
-    }
-
     @Override
     public BookingDto addBooking(int userId, BookingInfoDto bookingDto) {
         log.info("Start to create booking for item with id {}.", bookingDto.getItemId());
@@ -49,7 +40,10 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getEndBooking().isAfter(booking.getStartBooking())) {
             if (userId != item.getOwner().getId()) {
                 for (Booking b : item.getBookings()) {
-                    if (checkStart(booking, b) || checkEnd(booking, b)) {
+                    if (b.getStartBooking().until(b.getEndBooking(), ChronoUnit.NANOS) >
+                            b.getStartBooking().until(booking.getStartBooking(), ChronoUnit.NANOS) ||
+                            b.getStartBooking().until(b.getEndBooking(), ChronoUnit.NANOS) >
+                                    b.getStartBooking().until(booking.getEndBooking(), ChronoUnit.NANOS)) {
                         crossingCheck = true;
                         break;
                     }
