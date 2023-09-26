@@ -16,7 +16,6 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -40,10 +39,8 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getEndBooking().isAfter(booking.getStartBooking())) {
             if (userId != item.getOwner().getId()) {
                 for (Booking b : item.getBookings()) {
-                    if (b.getStartBooking().until(b.getEndBooking(), ChronoUnit.NANOS) >
-                            b.getStartBooking().until(booking.getStartBooking(), ChronoUnit.NANOS) ||
-                            b.getStartBooking().until(b.getEndBooking(), ChronoUnit.NANOS) >
-                                    b.getStartBooking().until(booking.getEndBooking(), ChronoUnit.NANOS)) {
+                    if (isBetween(b.getStartBooking(), booking.getStartBooking(), booking.getEndBooking()) ||
+                            isBetween(b.getEndBooking(), booking.getStartBooking(), booking.getEndBooking()) ) {
                         crossingCheck = true;
                         break;
                     }
@@ -305,5 +302,9 @@ public class BookingServiceImpl implements BookingService {
             usersMap.put(u.getId(), u);
         }
         return usersMap;
+    }
+
+    public static Boolean isBetween(LocalDateTime date, LocalDateTime before, LocalDateTime after) {
+        return date.isAfter(before) && date.isBefore(after);
     }
 }
