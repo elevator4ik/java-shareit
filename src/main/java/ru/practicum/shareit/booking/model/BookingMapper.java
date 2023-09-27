@@ -46,8 +46,8 @@ public class BookingMapper {
         if (!bookings.isEmpty()) {
             for (Booking i : bookings) {
                 bookingsDto.add(toBookingDto(i, i.getItem(), users.stream()
-                        .filter(u -> u.getId().equals(i.getBookerId())).
-                                collect(Collectors.toList())
+                        .filter(u -> u.getId().equals(i.getBookerId()))
+                        .collect(Collectors.toList())
                         .get(0)));
             }
         }
