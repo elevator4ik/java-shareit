@@ -3,6 +3,7 @@ package ru.practicum.shareit.booking.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingEnum;
+import ru.practicum.shareit.item.model.Item;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,29 +11,17 @@ import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
 
-    Optional<Booking> findByBookerIdAndItemIdAndStatusAndEndBookingBefore(
-            Integer userId, Integer itemId, BookingEnum status, LocalDateTime endBooking);
+    Optional<Booking> findFirstByItemAndBookerIdAndStatusAndEndBookingBeforeOrderByStartBooking(
+            Item item, Integer bookerId, BookingEnum status, LocalDateTime now);
 
     List<Booking> findAllByBookerIdOrderByStartBookingDesc(int userId);
 
-    List<Booking> findAllByBookerIdAndStartBookingAfterOrderByStartBookingDesc(int bookerId, LocalDateTime time);
+    List<Booking> findAllByItemAndStatus(Item items, BookingEnum status);
 
-    List<Booking> findAllByBookerIdAndStartBookingBeforeAndEndBookingAfterOrderByStartBookingDesc(
-            int bookerId, LocalDateTime timeStart, LocalDateTime timeEnd);
+    List<Booking> findAllByItemInOrderByStartBookingDesc(List<Item> items);
 
-    List<Booking> findAllByBookerIdAndEndBookingBeforeOrderByStartBookingDesc(int bookerId, LocalDateTime time);
+    List<Booking> findAllByItemIn(List<Item> items);
 
-    List<Booking> findAllByBookerIdAndStatusOrderByStartBookingDesc(int bookerId, BookingEnum state);
-
-    List<Booking> findAllByItemIdInAndStartBookingBeforeAndEndBookingAfterOrderByStartBookingDesc(
-            List<Integer> items, LocalDateTime timeStart, LocalDateTime timeEnd);
-
-    List<Booking> findAllByItemIdInAndStartBookingAfterOrderByStartBookingDesc(List<Integer> items, LocalDateTime time);
-
-    List<Booking> findAllByItemIdInAndEndBookingBeforeOrderByStartBookingDesc(List<Integer> items, LocalDateTime time);
-
-    List<Booking> findAllByItemIdInAndStatusOrderByStartBookingDesc(List<Integer> items, BookingEnum state);
-
-    List<Booking> findAllByItemIdInOrderByStartBookingDesc(List<Integer> items);
+    List<Booking> findAllByItem(Item item);
 
 }

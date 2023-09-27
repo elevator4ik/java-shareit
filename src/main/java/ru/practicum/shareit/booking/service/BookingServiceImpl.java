@@ -3,13 +3,16 @@ package ru.practicum.shareit.booking.service;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingInfoDto;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingEnum;
 import ru.practicum.shareit.booking.model.BookingMapper;
 import ru.practicum.shareit.booking.repository.BookingRepository;
-import ru.practicum.shareit.exception.*;
+import ru.practicum.shareit.exception.BadRequestException;
+import ru.practicum.shareit.exception.ErrorException;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.user.model.User;
@@ -17,9 +20,11 @@ import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Transactional
 @Slf4j
 public class BookingServiceImpl implements BookingService {
 
@@ -31,14 +36,17 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingDto addBooking(int userId, BookingInfoDto bookingDto) {
         log.info("Start to create booking for item with id {}.", bookingDto.getItemId());
-        User user = getUser(userId);
+        User booker = getUser(userId);
         Item item = getItemWithCheck(bookingDto.getItemId());
-        Booking booking = bookingMapper.toBooking(bookingDto, userId);
+        Booking booking = bookingMapper.toBooking(bookingDto, userId, item);
         boolean crossingCheck = false;
 
         if (booking.getEndBooking().isAfter(booking.getStartBooking())) {
             if (userId != item.getOwner().getId()) {
-                for (Booking b : item.getBookings()) {
+                for (Booking b : bookingRepository.findAllByItem(item)
+                        .stream()
+                        .filter(b -> b.getStatus().equals(BookingEnum.APPROVED))
+                        .collect(Collectors.toList())) {
                     if (isBetween(b.getStartBooking(), booking.getStartBooking(), booking.getEndBooking()) ||
                             isBetween(b.getEndBooking(), booking.getStartBooking(), booking.getEndBooking())) {
                         crossingCheck = true;
@@ -52,7 +60,7 @@ public class BookingServiceImpl implements BookingService {
                     booking.setStatus(BookingEnum.WAITING);
 
                     return bookingMapper.toBookingDto(
-                            bookingRepository.saveAndFlush(booking), item, user);
+                            bookingRepository.saveAndFlush(booking), item, booker);
                 }
             } else {
                 throw new NotFoundException("Owner trying to booking item.");
@@ -69,18 +77,16 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException("Booking with id "
                         + bookingId + " not found."));
-        User user = getUser(booking.getBookerId());
-        Item item = itemRepository.findById(booking.getItemId())
-                .orElseThrow(() -> new NotFoundException("Item with id " + booking.getItemId() + " not found."));
+        User booker = getUser(booking.getBookerId());
+        Item item = booking.getItem();
 
         if (userId != item.getOwner().getId()) {
             throw new NotFoundException("Not owner trying to update booking status.");
+        } else if (booking.getStatus() != BookingEnum.WAITING) {
+            throw new BadRequestException("Booking already approved/rejected.");
         }
         switch (approved) {
             case "true":
-                if (booking.getStatus() != null && booking.getStatus().equals(BookingEnum.APPROVED)) {
-                    throw new BadRequestException("Booking already approved.");
-                }
                 booking.setStatus(BookingEnum.APPROVED);
                 break;
             case "false":
@@ -90,7 +96,7 @@ public class BookingServiceImpl implements BookingService {
                 throw new BadRequestException("'Approved' parameter have incorrect value.");
         }
         return bookingMapper.toBookingDto(
-                bookingRepository.saveAndFlush(booking), item, user);
+                bookingRepository.saveAndFlush(booking), item, booker);
     }
 
     @Override
@@ -101,12 +107,10 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new NotFoundException("Booking with id "
                         + bookingId + " not found or user not authorized to get this booking."));
         User user = getUser(booking.getBookerId());
-        Item item = itemRepository.findById(booking.getItemId())
-                .orElseThrow(() -> new NotFoundException("Item with id " + booking.getItemId() + " not found."));
+        Item item = booking.getItem();
 
         if (userId == booking.getBookerId() || userId == item.getOwner().getId()) {
             return bookingMapper.toBookingDto(booking, item, user);
-
         } else {
             throw new NotFoundException("User not authorized to get this booking.");
         }
@@ -134,62 +138,40 @@ public class BookingServiceImpl implements BookingService {
 
     private List<BookingDto> getUserBookings(User user, String state) {
         log.info("Start to get bookings of user {}", user.getId());
-        List<Booking> bookings;
-        List<Integer> ids = new ArrayList<>();
 
+        List<Booking> bookings = bookingRepository.findAllByBookerIdOrderByStartBookingDesc(user.getId());
+
+        if (bookings.isEmpty()) {
+            throw new NotFoundException("Bookings of user with id " + user.getId() + "not found.");
+        }
         log.info("Start to get bookings with status {}", state);
 
         if (state.equals(BookingEnum.ALL.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByBookerIdOrderByStartBookingDesc(user.getId()))
-                    .orElseThrow(() -> new NotFoundException("Bookings of user with id "
-                            + user.getId() + "and param ALL not found."));
-            Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
-
-            return bookingMapper.toBookingDtoList(bookings, itemsMap, user);
+            return bookingMapper.toBookingDtoList(bookings, user);
         } else if (state.equals(BookingEnum.PAST.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByBookerIdAndEndBookingBeforeOrderByStartBookingDesc(
-                                    user.getId(), LocalDateTime.now()))
-                    .orElseThrow(() -> new NotFoundException("Bookings of user with id "
-                            + user.getId() + "and param PAST not found."));
-            Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
-
-            return bookingMapper.toBookingDtoList(bookings, itemsMap, user);
+            return bookingMapper.toBookingDtoList(bookings.stream()
+                    .filter(b -> b.getEndBooking().isBefore(LocalDateTime.now()))
+                    .collect(Collectors.toList()), user);
         } else if (state.equals(BookingEnum.FUTURE.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByBookerIdAndStartBookingAfterOrderByStartBookingDesc(
-                                    user.getId(), LocalDateTime.now()))
-                    .orElseThrow(() -> new NotFoundException("Bookings of user with id "
-                            + user.getId() + "and param FUTURE not found."));
-            Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
-
-            return bookingMapper.toBookingDtoList(bookings, itemsMap, user);
+            return bookingMapper.toBookingDtoList(bookings.stream()
+                    .filter(b -> b.getStartBooking().isAfter(LocalDateTime.now()))
+                    .collect(Collectors.toList()), user);
         } else if (state.equals(BookingEnum.CURRENT.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByBookerIdAndStartBookingBeforeAndEndBookingAfterOrderByStartBookingDesc(
-                                    user.getId(), LocalDateTime.now(), LocalDateTime.now()))
-                    .orElseThrow(() -> new NotFoundException("Bookings of user with id "
-                            + user.getId() + "and param CURRENT not found."));
-            Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
-
-            return bookingMapper.toBookingDtoList(bookings, itemsMap, user);
+            return bookingMapper.toBookingDtoList(bookings.stream()
+                    .filter(b -> b.getStartBooking().isBefore(LocalDateTime.now()))
+                    .filter(b -> b.getEndBooking().isAfter(LocalDateTime.now()))
+                    .collect(Collectors.toList()), user);
         } else if (state.equals(BookingEnum.WAITING.toString()) ||
                 state.equals(BookingEnum.REJECTED.toString()) ||
                 state.equals(BookingEnum.APPROVED.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByBookerIdAndStatusOrderByStartBookingDesc(
-                                    user.getId(), BookingEnum.valueOf(state)))
-                    .orElseThrow(() -> new NotFoundException("Bookings of user with id "
-                            + user.getId() + "and param " + state + " not found."));
-            Map<Integer, Item> itemsMap = getItemsMap(bookings, ids);
-
-            return bookingMapper.toBookingDtoList(bookings, itemsMap, user);
+            return bookingMapper.toBookingDtoList(bookings.stream()
+                    .filter(b -> b.getStatus().toString().equals(state))
+                    .collect(Collectors.toList()), user);
         } else {
             throw new BadRequestException("Unknown state: UNSUPPORTED_STATUS");
         }
@@ -198,69 +180,47 @@ public class BookingServiceImpl implements BookingService {
     private List<BookingDto> getOwnerBookings(User user, String state) {
         log.info("Start to get bookings of owner {}", user.getId());
 
-        List<Booking> bookings;
-        List<Integer> ids = new ArrayList<>();
-        List<Integer> userIds = new ArrayList<>();
-        Map<Integer, Item> itemMap = new HashMap<>();
-        for (Item i : itemRepository.findAllByOwnerId(user.getId())) {
-            ids.add(i.getId());
-            itemMap.put(i.getId(), i);
+        List<Item> items = itemRepository.findAllByOwnerId(user.getId());
+        if (items.isEmpty()) {
+            throw new NotFoundException("Items of owner with id " + user.getId() + "not found.");
         }
+        List<Booking> bookings = bookingRepository.findAllByItemInOrderByStartBookingDesc(items);
+        if (bookings.isEmpty()) {
+            throw new NotFoundException("Bookings of items of owner with id " + user.getId() + "not found.");
+        }
+        List<Integer> bookersIds = new ArrayList<>();
+        for (Booking b : bookings) {
+            bookersIds.add(b.getBookerId());
+        }
+        List<User> bookers = userRepository.findAllByIdIn(bookersIds);
+
         log.info("Start to get bookings with status {}", state);
         if (state.equals(BookingEnum.ALL.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByItemIdInOrderByStartBookingDesc(ids))
-                    .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
-                            + user.getId() + "and param ALL not found."));
-            Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
-
-
-            return bookingMapper.toBookingDtoListFromOwner(bookings, itemMap, usersMap);
+            return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
         } else if (state.equals(BookingEnum.PAST.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByItemIdInAndEndBookingBeforeOrderByStartBookingDesc(
-                                    ids, LocalDateTime.now()))
-                    .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
-                            + user.getId() + "and param PAST not found."));
-            Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
-
-
-            return bookingMapper.toBookingDtoListFromOwner(bookings, itemMap, usersMap);
+            return bookingMapper.toBookingDtoListFromOwner(bookings.stream()
+                    .filter(b -> b.getEndBooking().isBefore(LocalDateTime.now()))
+                    .collect(Collectors.toList()), bookers);
         } else if (state.equals(BookingEnum.FUTURE.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByItemIdInAndStartBookingAfterOrderByStartBookingDesc(
-                                    ids, LocalDateTime.now()))
-                    .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
-                            + user.getId() + "and param FUTURE not found."));
-            Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
-
-            return bookingMapper.toBookingDtoListFromOwner(bookings, itemMap, usersMap);
-
+            return bookingMapper.toBookingDtoListFromOwner(bookings.stream()
+                    .filter(b -> b.getStartBooking().isAfter(LocalDateTime.now()))
+                    .collect(Collectors.toList()), bookers);
         } else if (state.equals(BookingEnum.CURRENT.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByItemIdInAndStartBookingBeforeAndEndBookingAfterOrderByStartBookingDesc(
-                                    ids, LocalDateTime.now(), LocalDateTime.now()))
-                    .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
-                            + user.getId() + "and param CURRENT not found."));
-            Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
-
-            return bookingMapper.toBookingDtoListFromOwner(bookings, itemMap, usersMap);
+            return bookingMapper.toBookingDtoListFromOwner(bookings.stream()
+                    .filter(b -> b.getStartBooking().isBefore(LocalDateTime.now()))
+                    .filter(b -> b.getEndBooking().isAfter(LocalDateTime.now()))
+                    .collect(Collectors.toList()), bookers);
         } else if (state.equals(BookingEnum.WAITING.toString()) ||
                 state.equals(BookingEnum.REJECTED.toString()) ||
                 state.equals(BookingEnum.APPROVED.toString())) {
 
-            bookings = Optional.of(
-                            bookingRepository.findAllByItemIdInAndStatusOrderByStartBookingDesc(ids, BookingEnum.valueOf(state)))
-                    .orElseThrow(() -> new NotFoundException("Bookings of owner with id "
-                            + user.getId() + "and param " + state + " not found."));
-            Map<Integer, User> usersMap = getUsersMap(bookings, userIds);
-
-
-            return bookingMapper.toBookingDtoListFromOwner(bookings, itemMap, usersMap);
+            return bookingMapper.toBookingDtoListFromOwner(bookings.stream()
+                    .filter(b -> b.getStatus().toString().equals(state))
+                    .collect(Collectors.toList()), bookers);
         } else {
             throw new BadRequestException("Unknown state: UNSUPPORTED_STATUS");
         }
@@ -281,30 +241,7 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
-    private Map<Integer, Item> getItemsMap(List<Booking> bookings, List<Integer> ids) {
-        for (Booking b : bookings) {
-            ids.add(b.getItemId());
-        }
-        List<Item> items = itemRepository.findAllByIdIn(ids);
-        Map<Integer, Item> itemsMap = new HashMap<>();
-        for (Item i : items) {
-            itemsMap.put(i.getId(), i);
-        }
-        return itemsMap;
-    }
-
-    private Map<Integer, User> getUsersMap(List<Booking> bookings, List<Integer> userIds) {
-        for (Booking b : bookings) {
-            userIds.add(b.getBookerId());
-        }
-        Map<Integer, User> usersMap = new HashMap<>();
-        for (User u : userRepository.findAllByIdIn(userIds)) {
-            usersMap.put(u.getId(), u);
-        }
-        return usersMap;
-    }
-
-    public static Boolean isBetween(LocalDateTime date, LocalDateTime before, LocalDateTime after) {
+    private Boolean isBetween(LocalDateTime date, LocalDateTime before, LocalDateTime after) {
         return date.isAfter(before) && date.isBefore(after);
     }
 }

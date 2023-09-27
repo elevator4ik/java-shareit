@@ -1,6 +1,7 @@
 package ru.practicum.shareit.booking.model;
 
 import lombok.*;
+import ru.practicum.shareit.item.model.Item;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -10,7 +11,6 @@ import java.time.LocalDateTime;
 @Setter
 @RequiredArgsConstructor
 @AllArgsConstructor
-@ToString
 @Entity
 @Table(name = "bookings", schema = "public")
 public class Booking implements Comparable<Booking> {
@@ -24,9 +24,9 @@ public class Booking implements Comparable<Booking> {
     @NotNull
     @Column(name = "end_date", nullable = false)
     private LocalDateTime endBooking;
-    @NotNull
-    @Column(name = "item_id", nullable = false)
-    private Integer itemId;
+    @ManyToOne(targetEntity = Item.class)
+    @JoinColumn(name = "item_id")
+    private Item item;
     @NotNull
     @Column(name = "booker_id", nullable = false)
     private Integer bookerId;

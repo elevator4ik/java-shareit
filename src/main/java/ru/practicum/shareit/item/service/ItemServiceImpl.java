@@ -3,6 +3,9 @@ package ru.practicum.shareit.item.service;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.booking.model.Booking;
+import ru.practicum.shareit.booking.model.BookingComparator;
 import ru.practicum.shareit.booking.model.BookingEnum;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.exception.BadRequestException;
@@ -25,6 +28,7 @@ import java.util.Optional;
 
 @Service
 @AllArgsConstructor
+@Transactional
 @Slf4j
 public class ItemServiceImpl implements ItemService {
 
@@ -42,7 +46,7 @@ public class ItemServiceImpl implements ItemService {
 
         Item item = itemMapper.toItem(itemDto, getUserFromRepo(userId));
 
-        return itemMapper.toItemDtoForUser(itemRepository.saveAndFlush(item));
+        return itemMapper.toItemDtoForUser(itemRepository.saveAndFlush(item), getComments(item));
     }
 
     @Override
@@ -63,8 +67,7 @@ public class ItemServiceImpl implements ItemService {
             if (itemDto.getAvailable() != null) {
                 item.setAvailable(itemDto.getAvailable());
             }
-            return itemMapper.toItemDto(
-                    itemRepository.saveAndFlush(item));
+            return itemMapper.toItemDto(item, getComments(item), null, null);
         } else {
             throw new NotFoundException("Not owner trying to update Item");
         }
@@ -76,10 +79,26 @@ public class ItemServiceImpl implements ItemService {
 
         Item item = itemRepository.findByOwnerIdAndId(userId, id)
                 .orElse(getItemFromRepo(id));
+        List<Booking> bookings = bookingRepository.findAllByItemAndStatus(item, BookingEnum.APPROVED);
+
         if (userId == item.getOwner().getId()) {
-            return itemMapper.toItemDto(item);
+            if (bookings.isEmpty()) {
+                return itemMapper.toItemDto(item, getComments(item), null, null);
+            } else {
+                return itemMapper.toItemDto(item,
+                        getComments(item),
+                        bookings.stream()
+                                .filter(b -> b.getStartBooking().isAfter(LocalDateTime.now()))
+                                .min(new BookingComparator())
+                                .orElse(null),
+                        bookings.stream()
+                                .filter(b -> b.getStartBooking().isBefore(LocalDateTime.now())
+                                        || b.getEndBooking().isBefore(LocalDateTime.now()))
+                                .max(new BookingComparator())
+                                .orElse(null));
+            }
         } else {
-            return itemMapper.toItemDtoForUser(item);
+            return itemMapper.toItemDtoForUser(item, getComments(item));
         }
     }
 
@@ -90,7 +109,9 @@ public class ItemServiceImpl implements ItemService {
 
         List<Item> list = Optional.of(itemRepository.findAllByOwnerId(userId))
                 .orElseThrow(() -> new NotFoundException("Nothing found"));
-        return itemMapper.toItemDtoList(list);
+        List<Booking> bookings = bookingRepository.findAllByItemIn(list);
+        List<Comment> comments = commentsRepository.findAllByItemIn(list);
+        return itemMapper.toItemDtoList(list, comments, bookings);
     }
 
     @Override
@@ -103,7 +124,8 @@ public class ItemServiceImpl implements ItemService {
             List<Item> items = itemRepository.search(text);
 
             if (!items.isEmpty()) {
-                itemsDto = itemMapper.toItemDtoListForUser(items);
+                List<Comment> comments = commentsRepository.findAllByItemIn(items);
+                itemsDto = itemMapper.toItemDtoListForUser(items, comments);
             }
         }
         return itemsDto;
@@ -112,13 +134,13 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public CommentDto createComment(int userId, int itemId, CommentDto commentDto) {
         log.info("Start to create comment to item {}", itemId);
-        bookingRepository.findByBookerIdAndItemIdAndStatusAndEndBookingBefore(
-                userId, itemId, BookingEnum.APPROVED, LocalDateTime.now().minusSeconds(5))// -5 сек нужны, чтобы тест в
-                // постмане не ловил 6 букинг, т.к. эндтайм через 1 секнду после старттайма, а если он его ловит -
-                // вылетает ошибка, что результат запроса не уникален, т.к. букинг создается на те же itemId и userId,
-                // в реальности такое не возможно
+
+        User user = getUserFromRepo(userId);
+        Item item = getItemFromRepo(itemId);
+        bookingRepository.findFirstByItemAndBookerIdAndStatusAndEndBookingBeforeOrderByStartBooking(
+                item, userId, BookingEnum.APPROVED, LocalDateTime.now())
                 .orElseThrow(() -> new BadRequestException("Booking still not end or user+item not match"));
-        Comment comment = commentMapper.toComment(commentDto, getUserFromRepo(userId), itemId);
+        Comment comment = commentMapper.toComment(commentDto, user, item);
 
         return commentMapper.toCommentDto(commentsRepository.saveAndFlush(comment));
     }
@@ -131,5 +153,9 @@ public class ItemServiceImpl implements ItemService {
     private User getUserFromRepo(int id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User with id " + id + " not found."));
+    }
+
+    private List<Comment> getComments(Item item) {
+        return commentsRepository.findAllByItem(item);
     }
 }

@@ -8,16 +8,16 @@ import ru.practicum.shareit.user.model.User;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class BookingMapper {
 
-    public Booking toBooking(BookingInfoDto bookingDto, int userId) {
+    public Booking toBooking(BookingInfoDto bookingDto, int userId, Item item) {
         return new Booking(null,
                 bookingDto.getStart(),
                 bookingDto.getEnd(),
-                bookingDto.getItemId(),
+                item,
                 userId,
                 null);
     }
@@ -31,19 +31,25 @@ public class BookingMapper {
                 booking.getStatus());
     }
 
-    public List<BookingDto> toBookingDtoList(List<Booking> bookings, Map<Integer, Item> items, User user) {
+    public List<BookingDto> toBookingDtoList(List<Booking> bookings, User user) {
         List<BookingDto> bookingsDto = new ArrayList<>();
-        for (Booking i : bookings) {
-            bookingsDto.add(toBookingDto(i, items.get(i.getItemId()), user));
+        if (!bookings.isEmpty()) {
+            for (Booking i : bookings) {
+                bookingsDto.add(toBookingDto(i, i.getItem(), user));
+            }
         }
         return bookingsDto;
     }
 
-    public List<BookingDto> toBookingDtoListFromOwner(List<Booking> bookings, Map<Integer, Item> items,
-                                                      Map<Integer, User> users) {
+    public List<BookingDto> toBookingDtoListFromOwner(List<Booking> bookings, List<User> users) {
         List<BookingDto> bookingsDto = new ArrayList<>();
-        for (Booking i : bookings) {
-            bookingsDto.add(toBookingDto(i, items.get(i.getItemId()), users.get(i.getBookerId())));
+        if (!bookings.isEmpty()) {
+            for (Booking i : bookings) {
+                bookingsDto.add(toBookingDto(i, i.getItem(), users.stream()
+                        .filter(u -> u.getId().equals(i.getBookerId())).
+                                collect(Collectors.toList())
+                        .get(0)));
+            }
         }
         return bookingsDto;
     }

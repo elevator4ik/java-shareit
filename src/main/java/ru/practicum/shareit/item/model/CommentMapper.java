@@ -11,12 +11,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CommentMapper {
 
-    public Comment toComment(CommentDto commentDto, User user, int itemId) {
+    public Comment toComment(CommentDto commentDto, User user, Item item) {
         return new Comment(commentDto.getId(),
                 LocalDateTime.now(),
                 commentDto.getText(),
                 user,
-                itemId);
+                item);
     }
 
     public CommentDto toCommentDto(Comment comment) {

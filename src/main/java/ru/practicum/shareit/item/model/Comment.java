@@ -24,9 +24,10 @@ public class Comment {
     private LocalDateTime created;
     @Column(name = "comment_text", nullable = false)
     private String text;
-    @ManyToOne
+    @ManyToOne(targetEntity = User.class)
     @JoinColumn(name = "author_id")
     private User author;
-    @Column(name = "item_id", nullable = false)
-    private Integer itemId;
+    @ManyToOne(targetEntity = Item.class)
+    @JoinColumn(name = "item_id")
+    private Item item;
 }

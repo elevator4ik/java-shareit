@@ -1,11 +1,9 @@
 package ru.practicum.shareit.item.model;
 
 import lombok.*;
-import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.user.model.User;
 
 import javax.persistence.*;
-import java.util.List;
 
 @Getter
 @Setter
@@ -24,15 +22,9 @@ public class Item {
     private String description;
     @Column(name = "is_available", nullable = false)
     private Boolean available;
-    @ManyToOne
+    @ManyToOne(targetEntity = User.class)
     @JoinColumn(name = "owner_id")
     private User owner;
     @Column(name = "request_id")
     private Integer request;
-    @OneToMany(fetch = FetchType.LAZY)
-    @JoinColumn(name = "item_id", updatable = false, insertable = false)
-    private List<Booking> bookings;
-    @OneToMany(fetch = FetchType.LAZY)
-    @JoinColumn(name = "item_id", updatable = false, insertable = false)
-    private List<Comment> comments;
 }
