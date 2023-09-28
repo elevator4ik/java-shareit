@@ -8,7 +8,7 @@ import ru.practicum.shareit.user.model.User;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @Component
 public class BookingMapper {
@@ -41,14 +41,11 @@ public class BookingMapper {
         return bookingsDto;
     }
 
-    public List<BookingDto> toBookingDtoListFromOwner(List<Booking> bookings, List<User> users) {
+    public List<BookingDto> toBookingDtoListFromOwner(List<Booking> bookings, Map<Integer, User> users) {
         List<BookingDto> bookingsDto = new ArrayList<>();
         if (!bookings.isEmpty()) {
             for (Booking i : bookings) {
-                bookingsDto.add(toBookingDto(i, i.getItem(), users.stream()
-                        .filter(u -> u.getId().equals(i.getBookerId()))
-                        .collect(Collectors.toList())
-                        .get(0)));
+                bookingsDto.add(toBookingDto(i, i.getItem(), users.get(i.getBookerId())));
             }
         }
         return bookingsDto;

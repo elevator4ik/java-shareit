@@ -2,6 +2,7 @@ package ru.practicum.shareit.booking.service;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
@@ -139,41 +140,54 @@ public class BookingServiceImpl implements BookingService {
     private List<BookingDto> getUserBookings(User user, String state) {
         log.info("Start to get bookings of user {}", user.getId());
 
-        List<Booking> bookings = bookingRepository.findAllByBookerIdOrderByStartBookingDesc(user.getId());
+        List<Booking> bookings;
 
-        if (bookings.isEmpty()) {
-            throw new NotFoundException("Bookings of user with id " + user.getId() + "not found.");
-        }
         log.info("Start to get bookings with status {}", state);
 
-        if (state.equals(BookingEnum.ALL.toString())) {
+        switch (state) {
+            case "ALL":
+                bookings = bookingRepository.findAllByBookerId(user.getId(),
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
 
-            return bookingMapper.toBookingDtoList(bookings, user);
-        } else if (state.equals(BookingEnum.PAST.toString())) {
+                return bookingMapper.toBookingDtoList(bookings, user);
+            case "PAST":
+                bookings = bookingRepository.findAllByBookerIdAndEndBookingIsBefore(user.getId(),
+                        LocalDateTime.now(),
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
 
-            return bookingMapper.toBookingDtoList(bookings.stream()
-                    .filter(b -> b.getEndBooking().isBefore(LocalDateTime.now()))
-                    .collect(Collectors.toList()), user);
-        } else if (state.equals(BookingEnum.FUTURE.toString())) {
+                return bookingMapper.toBookingDtoList(bookings, user);
+            case "FUTURE":
+                bookings = bookingRepository.findAllByBookerIdAndStartBookingIsAfter(user.getId(),
+                        LocalDateTime.now(),
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
 
-            return bookingMapper.toBookingDtoList(bookings.stream()
-                    .filter(b -> b.getStartBooking().isAfter(LocalDateTime.now()))
-                    .collect(Collectors.toList()), user);
-        } else if (state.equals(BookingEnum.CURRENT.toString())) {
+                return bookingMapper.toBookingDtoList(bookings, user);
+            case "CURRENT":
+                bookings = bookingRepository.findAllByBookerIdAndStartBookingIsBeforeAndEndBookingIsAfter(user.getId(),
+                        LocalDateTime.now(), LocalDateTime.now(),
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
 
-            return bookingMapper.toBookingDtoList(bookings.stream()
-                    .filter(b -> b.getStartBooking().isBefore(LocalDateTime.now()))
-                    .filter(b -> b.getEndBooking().isAfter(LocalDateTime.now()))
-                    .collect(Collectors.toList()), user);
-        } else if (state.equals(BookingEnum.WAITING.toString()) ||
-                state.equals(BookingEnum.REJECTED.toString()) ||
-                state.equals(BookingEnum.APPROVED.toString())) {
+                return bookingMapper.toBookingDtoList(bookings, user);
+            case "WAITING":
+                bookings = bookingRepository.findAllByBookerIdAndStatusEquals(user.getId(),
+                        BookingEnum.WAITING,
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
 
-            return bookingMapper.toBookingDtoList(bookings.stream()
-                    .filter(b -> b.getStatus().toString().equals(state))
-                    .collect(Collectors.toList()), user);
-        } else {
-            throw new BadRequestException("Unknown state: UNSUPPORTED_STATUS");
+                return bookingMapper.toBookingDtoList(bookings, user);
+            case "REJECTED":
+                bookings = bookingRepository.findAllByBookerIdAndStatusEquals(user.getId(),
+                        BookingEnum.REJECTED,
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
+
+                return bookingMapper.toBookingDtoList(bookings, user);
+            case "APPROVED":
+                bookings = bookingRepository.findAllByBookerIdAndStatusEquals(user.getId(),
+                        BookingEnum.APPROVED,
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
+
+                return bookingMapper.toBookingDtoList(bookings, user);
+            default:
+                throw new BadRequestException("Unknown state: UNSUPPORTED_STATUS");
         }
     }
 
@@ -181,48 +195,79 @@ public class BookingServiceImpl implements BookingService {
         log.info("Start to get bookings of owner {}", user.getId());
 
         List<Item> items = itemRepository.findAllByOwnerId(user.getId());
-        if (items.isEmpty()) {
-            throw new NotFoundException("Items of owner with id " + user.getId() + "not found.");
-        }
-        List<Booking> bookings = bookingRepository.findAllByItemInOrderByStartBookingDesc(items);
-        if (bookings.isEmpty()) {
-            throw new NotFoundException("Bookings of items of owner with id " + user.getId() + "not found.");
-        }
-        List<Integer> bookersIds = new ArrayList<>();
-        for (Booking b : bookings) {
-            bookersIds.add(b.getBookerId());
-        }
-        List<User> bookers = userRepository.findAllByIdIn(bookersIds);
+
+        List<Booking> bookings;
+        Map<Integer, User> bookers;
 
         log.info("Start to get bookings with status {}", state);
-        if (state.equals(BookingEnum.ALL.toString())) {
+        switch (state) {
+            case "ALL":
+                bookings = bookingRepository.findAllByItemIn(items,
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                bookers = getBookers(bookings);
 
-            return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
-        } else if (state.equals(BookingEnum.PAST.toString())) {
+                return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
+            case "PAST":
+                bookings = bookingRepository.findAllByItemInAndEndBookingIsBefore(items,
+                        LocalDateTime.now(),
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                bookers = getBookers(bookings);
 
-            return bookingMapper.toBookingDtoListFromOwner(bookings.stream()
-                    .filter(b -> b.getEndBooking().isBefore(LocalDateTime.now()))
-                    .collect(Collectors.toList()), bookers);
-        } else if (state.equals(BookingEnum.FUTURE.toString())) {
+                return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
+            case "FUTURE":
+                bookings = bookingRepository.findAllByItemInAndStartBookingIsAfter(items,
+                        LocalDateTime.now(),
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                bookers = getBookers(bookings);
 
-            return bookingMapper.toBookingDtoListFromOwner(bookings.stream()
-                    .filter(b -> b.getStartBooking().isAfter(LocalDateTime.now()))
-                    .collect(Collectors.toList()), bookers);
-        } else if (state.equals(BookingEnum.CURRENT.toString())) {
+                return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
+            case "CURRENT":
+                bookings = bookingRepository.findAllByItemInAndStartBookingIsBeforeAndEndBookingIsAfter(items,
+                        LocalDateTime.now(), LocalDateTime.now(),
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                bookers = getBookers(bookings);
 
-            return bookingMapper.toBookingDtoListFromOwner(bookings.stream()
-                    .filter(b -> b.getStartBooking().isBefore(LocalDateTime.now()))
-                    .filter(b -> b.getEndBooking().isAfter(LocalDateTime.now()))
-                    .collect(Collectors.toList()), bookers);
-        } else if (state.equals(BookingEnum.WAITING.toString()) ||
-                state.equals(BookingEnum.REJECTED.toString()) ||
-                state.equals(BookingEnum.APPROVED.toString())) {
+                return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
+            case "WAITING":
+                bookings = bookingRepository.findAllByItemInAndStatusEquals(items,
+                        BookingEnum.WAITING,
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                bookers = getBookers(bookings);
 
-            return bookingMapper.toBookingDtoListFromOwner(bookings.stream()
-                    .filter(b -> b.getStatus().toString().equals(state))
-                    .collect(Collectors.toList()), bookers);
+                return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
+            case "REJECTED":
+                bookings = bookingRepository.findAllByItemInAndStatusEquals(items,
+                        BookingEnum.REJECTED,
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                bookers = getBookers(bookings);
+
+                return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
+            case "APPROVED":
+                bookings = bookingRepository.findAllByItemInAndStatusEquals(items,
+                        BookingEnum.APPROVED,
+                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                bookers = getBookers(bookings);
+
+                return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
+            default:
+                throw new BadRequestException("Unknown state: UNSUPPORTED_STATUS");
+        }
+    }
+
+    private Map<Integer, User> getBookers(List<Booking> bookings) {
+        if (bookings.isEmpty()) {
+            return new HashMap<>();
         } else {
-            throw new BadRequestException("Unknown state: UNSUPPORTED_STATUS");
+            List<Integer> bookersIds = new ArrayList<>();
+            for (Booking b : bookings) {
+                bookersIds.add(b.getBookerId());
+            }
+            List<User> users = userRepository.findAllByIdIn(bookersIds);
+            Map<Integer, User> userMap = new HashMap<>();
+            for (User u : users) {
+                userMap.put(u.getId(), u);
+            }
+            return userMap;
         }
     }
 

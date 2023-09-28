@@ -3,17 +3,14 @@ package ru.practicum.shareit.item.model;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.practicum.shareit.booking.model.Booking;
-import ru.practicum.shareit.booking.model.BookingComparator;
-import ru.practicum.shareit.booking.model.BookingEnum;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemDto.ItemBookingDto;
 import ru.practicum.shareit.user.model.User;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @Component
 @AllArgsConstructor
@@ -41,30 +38,18 @@ public class ItemMapper {
 
     }
 
-    public List<ItemDto> toItemDtoList(List<Item> items, List<Comment> comments, List<Booking> bookings) {
+    public List<ItemDto> toItemDtoList(List<Item> items,
+                                       Map<Integer, Booking> nextBookings,
+                                       Map<Integer, Booking> lastBookings,
+                                       Map<Integer, List<Comment>> itemsComments) {
 
         List<ItemDto> itemsDto = new ArrayList<>();
         for (Item i : items) {
-            Booking nextBooking = bookings.stream()
-                    .filter(b -> b.getItem().getId().equals(i.getId()))
-                    .filter(b -> b.getStatus().equals(BookingEnum.APPROVED))
-                    .filter(b -> b.getStartBooking().isAfter(LocalDateTime.now()))
-                    .min(new BookingComparator())
-                    .orElse(null);
-            Booking lastBooking = bookings.stream()
-                    .filter(b -> b.getItem().getId().equals(i.getId()))
-                    .filter(b -> b.getStatus().equals(BookingEnum.APPROVED))
-                    .filter(b -> b.getStartBooking().isBefore(LocalDateTime.now())
-                            || b.getEndBooking().isBefore(LocalDateTime.now()))
-                    .max(new BookingComparator())
-                    .orElse(null);
 
             itemsDto.add(toItemDto(i,
-                    comments.stream()
-                            .filter(c -> c.getItem().getId().equals(i.getId()))
-                            .collect(Collectors.toList()),
-                    nextBooking,
-                    lastBooking));
+                    itemsComments.get(i.getId()),
+                    nextBookings.get(i.getId()),
+                    lastBookings.get(i.getId())));
         }
         return itemsDto;
     }
@@ -80,13 +65,11 @@ public class ItemMapper {
                 toCommentDto(comments));
     }
 
-    public List<ItemDto> toItemDtoListForUser(List<Item> items, List<Comment> comments) {
+    public List<ItemDto> toItemDtoListForUser(List<Item> items, Map<Integer, List<Comment>> comments) {
         List<ItemDto> itemsDto = new ArrayList<>();
         for (Item i : items) {
             itemsDto.add(toItemDtoForUser(i,
-                    comments.stream()
-                            .filter(c -> c.getItem().getId().equals(i.getId()))
-                            .collect(Collectors.toList())));
+                    comments.get(i.getId())));
         }
         return itemsDto;
     }

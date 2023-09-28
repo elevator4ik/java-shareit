@@ -2,6 +2,7 @@ package ru.practicum.shareit.item.service;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.model.Booking;
@@ -22,9 +23,8 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -87,15 +87,8 @@ public class ItemServiceImpl implements ItemService {
             } else {
                 return itemMapper.toItemDto(item,
                         getComments(item),
-                        bookings.stream()
-                                .filter(b -> b.getStartBooking().isAfter(LocalDateTime.now()))
-                                .min(new BookingComparator())
-                                .orElse(null),
-                        bookings.stream()
-                                .filter(b -> b.getStartBooking().isBefore(LocalDateTime.now())
-                                        || b.getEndBooking().isBefore(LocalDateTime.now()))
-                                .max(new BookingComparator())
-                                .orElse(null));
+                        getNextBooking(bookings),
+                        getLastBooking(bookings));
             }
         } else {
             return itemMapper.toItemDtoForUser(item, getComments(item));
@@ -106,26 +99,37 @@ public class ItemServiceImpl implements ItemService {
     public List<ItemDto> getItemsOfOwner(int userId) {
 
         log.info("Start to getting items of owner with id {}", userId);
+        Map<Integer, Booking> nextBookings = new HashMap<>();
+        Map<Integer, Booking> lastBookings = new HashMap<>();
+        Map<Integer, List<Comment>> itemsComments = new HashMap<>();
+        List<Item> list = itemRepository.findAllByOwnerId(userId);
+        List<Booking> bookings = bookingRepository.findAllByItemIn(list,
+                Sort.by(Sort.Direction.DESC, "startBooking"));
 
-        List<Item> list = Optional.of(itemRepository.findAllByOwnerId(userId))
-                .orElseThrow(() -> new NotFoundException("Nothing found"));
-        List<Booking> bookings = bookingRepository.findAllByItemIn(list);
+        getNextAndLastBookings(list, bookings, nextBookings, lastBookings);
+
         List<Comment> comments = commentsRepository.findAllByItemIn(list);
-        return itemMapper.toItemDtoList(list, comments, bookings);
+
+        getCommentsMap(list, comments, itemsComments);
+
+        return itemMapper.toItemDtoList(list, nextBookings, lastBookings, itemsComments);
     }
 
     @Override
     public List<ItemDto> searchItem(int userId, String text) {
 
         log.info("Start to searching item which contains {}", text);
-
+        Map<Integer, List<Comment>> itemsComments = new HashMap<>();
         List<ItemDto> itemsDto = new ArrayList<>();
         if (!text.isEmpty()) {
             List<Item> items = itemRepository.search(text);
 
             if (!items.isEmpty()) {
                 List<Comment> comments = commentsRepository.findAllByItemIn(items);
-                itemsDto = itemMapper.toItemDtoListForUser(items, comments);
+
+                getCommentsMap(items, comments, itemsComments);
+
+                itemsDto = itemMapper.toItemDtoListForUser(items, itemsComments);
             }
         }
         return itemsDto;
@@ -157,5 +161,51 @@ public class ItemServiceImpl implements ItemService {
 
     private List<Comment> getComments(Item item) {
         return commentsRepository.findAllByItem(item);
+    }
+
+    private Booking getNextBooking(List<Booking> bookings) {
+        return bookings.stream()
+                .filter(b -> b.getStartBooking().isAfter(LocalDateTime.now()))
+                .min(new BookingComparator())
+                .orElse(null);
+    }
+
+    private Booking getLastBooking(List<Booking> bookings) {
+        return bookings.stream()
+                .filter(b -> b.getStartBooking().isBefore(LocalDateTime.now())
+                        || b.getEndBooking().isBefore(LocalDateTime.now()))
+                .max(new BookingComparator())
+                .orElse(null);
+    }
+
+    private void getNextAndLastBookings(List<Item> list,
+                                        List<Booking> bookings,
+                                        Map<Integer, Booking> nextBookings,
+                                        Map<Integer, Booking> lastBookings) {
+        for (Item i : list) {
+            Booking nextBooking = bookings.stream()
+                    .filter(b -> b.getItem().getId().equals(i.getId()))
+                    .filter(b -> b.getStatus().equals(BookingEnum.APPROVED))
+                    .filter(b -> b.getStartBooking().isAfter(LocalDateTime.now()))
+                    .min(new BookingComparator())
+                    .orElse(null);
+            nextBookings.put(i.getId(), nextBooking);
+            Booking lastBooking = bookings.stream()
+                    .filter(b -> b.getItem().getId().equals(i.getId()))
+                    .filter(b -> b.getStatus().equals(BookingEnum.APPROVED))
+                    .filter(b -> b.getStartBooking().isBefore(LocalDateTime.now())
+                            || b.getEndBooking().isBefore(LocalDateTime.now()))
+                    .max(new BookingComparator())
+                    .orElse(null);
+            lastBookings.put(i.getId(), lastBooking);
+        }
+    }
+
+    private void getCommentsMap(List<Item> list, List<Comment> comments, Map<Integer, List<Comment>> itemsComments) {
+        for (Item i : list) {
+            itemsComments.put(i.getId(), comments.stream()
+                    .filter(c -> c.getItem().getId().equals(i.getId()))
+                    .collect(Collectors.toList()));
+        }
     }
 }
