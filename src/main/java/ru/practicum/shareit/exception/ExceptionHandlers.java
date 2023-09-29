@@ -21,8 +21,8 @@ public class ExceptionHandlers {
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleNBadRequestException(final ValidationException e) {
-        log.error("Catch ValidationException: \n {}", e.getMessage());
+    public Map<String, String> handleNBadRequestException(final BadRequestException e) {
+        log.error("Catch BadRequestException: \n {}", e.getMessage());
         return Map.of("error", e.getMessage());
     }
 
