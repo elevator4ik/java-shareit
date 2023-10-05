@@ -55,7 +55,7 @@ public class ItemMapperTest {
                 user1.getId(),
                 BookingEnum.APPROVED);
         comment = new Comment(1, LocalDateTime.now(), "text", user1, item);
-        commentDto = new CommentDto(1, "text", user1.getName(), LocalDateTime.now());
+        commentDto = new CommentDto(1, "text", user1.getName(), comment.getCreated());
         nextBookingDto = new ItemDto.ItemBookingDto(
                 1,
                 nextBooking.getStartBooking(),
