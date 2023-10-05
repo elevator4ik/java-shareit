@@ -8,6 +8,7 @@ import javax.persistence.*;
 @Setter
 @AllArgsConstructor
 @RequiredArgsConstructor
+@ToString
 @Entity
 @Table(name = "users", schema = "public")
 public class User {

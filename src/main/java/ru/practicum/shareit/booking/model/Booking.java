@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Setter
 @RequiredArgsConstructor
 @AllArgsConstructor
+@ToString
 @Entity
 @Table(name = "bookings", schema = "public")
 public class Booking implements Comparable<Booking> {

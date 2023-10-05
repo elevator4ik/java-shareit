@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS requests
     request_id   integer NOT NULL AUTO_INCREMENT PRIMARY KEY,
     description  varchar(1024),
     requester_id integer
-        CONSTRAINT FK_REQUESTS REFERENCES users (user_id)
+        CONSTRAINT FK_REQUESTS_U REFERENCES users (user_id),
+    create_date  timestamp
 );
 
 CREATE TABLE IF NOT EXISTS items

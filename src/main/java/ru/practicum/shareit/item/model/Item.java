@@ -9,6 +9,7 @@ import javax.persistence.*;
 @Setter
 @AllArgsConstructor
 @RequiredArgsConstructor
+@ToString
 @Entity
 @Table(name = "items", schema = "public")
 public class Item {
