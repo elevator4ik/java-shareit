@@ -2,7 +2,7 @@ package ru.practicum.shareit.booking.service;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
@@ -28,11 +28,10 @@ import java.util.stream.Collectors;
 @Transactional
 @Slf4j
 public class BookingServiceImpl implements BookingService {
-
-    final UserRepository userRepository;
-    final ItemRepository itemRepository;
-    final BookingRepository bookingRepository;
-    final BookingMapper bookingMapper;
+    private final UserRepository userRepository;
+    private final ItemRepository itemRepository;
+    private final BookingRepository bookingRepository;
+    private final BookingMapper bookingMapper;
 
     @Override
     public BookingDto addBooking(int userId, BookingInfoDto bookingDto) {
@@ -118,7 +117,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingDto> getBookings(int userId, String state, String userStatus) {
+    public List<BookingDto> getBookings(int userId, String state, String userStatus, PageRequest pageRequest) {
         log.info("Start to get booking with user or owner id {} and status {}", userId, state);
 
         User user = getUser(userId);
@@ -127,17 +126,17 @@ public class BookingServiceImpl implements BookingService {
             case "user":
                 log.info("Getting booking with user id {} and status {}", userId, state);
 
-                return getUserBookings(user, state);
+                return getUserBookings(user, state, pageRequest);
             case "owner":
                 log.info("Getting booking with owner id {} and status {}", userId, state);
 
-                return getOwnerBookings(user, state);
+                return getOwnerBookings(user, state, pageRequest);
             default:
                 throw new ErrorException("Not valid user status.");
         }
     }
 
-    private List<BookingDto> getUserBookings(User user, String state) {
+    private List<BookingDto> getUserBookings(User user, String state, PageRequest pageRequest) {
         log.info("Start to get bookings of user {}", user.getId());
 
         List<Booking> bookings;
@@ -146,44 +145,43 @@ public class BookingServiceImpl implements BookingService {
 
         switch (state) {
             case "ALL":
-                bookings = bookingRepository.findAllByBookerId(user.getId(),
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                bookings = bookingRepository.findByBookerId(user.getId(), pageRequest).toList();
 
                 return bookingMapper.toBookingDtoList(bookings, user);
             case "PAST":
                 bookings = bookingRepository.findAllByBookerIdAndEndBookingIsBefore(user.getId(),
                         LocalDateTime.now(),
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
 
                 return bookingMapper.toBookingDtoList(bookings, user);
             case "FUTURE":
                 bookings = bookingRepository.findAllByBookerIdAndStartBookingIsAfter(user.getId(),
                         LocalDateTime.now(),
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
 
                 return bookingMapper.toBookingDtoList(bookings, user);
             case "CURRENT":
                 bookings = bookingRepository.findAllByBookerIdAndStartBookingIsBeforeAndEndBookingIsAfter(user.getId(),
                         LocalDateTime.now(), LocalDateTime.now(),
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
 
                 return bookingMapper.toBookingDtoList(bookings, user);
             case "WAITING":
                 bookings = bookingRepository.findAllByBookerIdAndStatusEquals(user.getId(),
                         BookingEnum.WAITING,
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
 
                 return bookingMapper.toBookingDtoList(bookings, user);
             case "REJECTED":
                 bookings = bookingRepository.findAllByBookerIdAndStatusEquals(user.getId(),
                         BookingEnum.REJECTED,
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
 
                 return bookingMapper.toBookingDtoList(bookings, user);
             case "APPROVED":
                 bookings = bookingRepository.findAllByBookerIdAndStatusEquals(user.getId(),
                         BookingEnum.APPROVED,
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
 
                 return bookingMapper.toBookingDtoList(bookings, user);
             default:
@@ -191,7 +189,7 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
-    private List<BookingDto> getOwnerBookings(User user, String state) {
+    private List<BookingDto> getOwnerBookings(User user, String state, PageRequest pageRequest) {
         log.info("Start to get bookings of owner {}", user.getId());
 
         List<Item> items = itemRepository.findAllByOwnerId(user.getId());
@@ -202,50 +200,50 @@ public class BookingServiceImpl implements BookingService {
         log.info("Start to get bookings with status {}", state);
         switch (state) {
             case "ALL":
-                bookings = bookingRepository.findAllByItemIn(items,
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                bookings = bookingRepository.findAllBookingByItemIn(items,
+                        pageRequest);
                 bookers = getBookers(bookings);
 
                 return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
             case "PAST":
                 bookings = bookingRepository.findAllByItemInAndEndBookingIsBefore(items,
                         LocalDateTime.now(),
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
                 bookers = getBookers(bookings);
 
                 return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
             case "FUTURE":
                 bookings = bookingRepository.findAllByItemInAndStartBookingIsAfter(items,
                         LocalDateTime.now(),
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
                 bookers = getBookers(bookings);
 
                 return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
             case "CURRENT":
                 bookings = bookingRepository.findAllByItemInAndStartBookingIsBeforeAndEndBookingIsAfter(items,
                         LocalDateTime.now(), LocalDateTime.now(),
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
                 bookers = getBookers(bookings);
 
                 return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
             case "WAITING":
                 bookings = bookingRepository.findAllByItemInAndStatusEquals(items,
                         BookingEnum.WAITING,
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
                 bookers = getBookers(bookings);
 
                 return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
             case "REJECTED":
                 bookings = bookingRepository.findAllByItemInAndStatusEquals(items,
                         BookingEnum.REJECTED,
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
                 bookers = getBookers(bookings);
 
                 return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);
             case "APPROVED":
                 bookings = bookingRepository.findAllByItemInAndStatusEquals(items,
                         BookingEnum.APPROVED,
-                        Sort.by(Sort.Direction.DESC, "startBooking"));
+                        pageRequest);
                 bookers = getBookers(bookings);
 
                 return bookingMapper.toBookingDtoListFromOwner(bookings, bookers);

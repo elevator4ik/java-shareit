@@ -1,10 +1,7 @@
 package ru.practicum.shareit.item.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import ru.practicum.shareit.marker.Create;
+import lombok.*;
+import ru.practicum.shareit.common.Create;
 
 import javax.validation.constraints.NotEmpty;
 import java.time.LocalDateTime;
@@ -13,9 +10,10 @@ import java.time.LocalDateTime;
 @Setter
 @AllArgsConstructor
 @RequiredArgsConstructor
+@ToString
 public class CommentDto {
 
-    private int id;
+    private Integer id;
     @NotEmpty(groups = {Create.class})
     private String text;
     private String authorName;

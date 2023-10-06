@@ -1,7 +1,7 @@
 package ru.practicum.shareit.item.dto;
 
 import lombok.*;
-import ru.practicum.shareit.marker.Create;
+import ru.practicum.shareit.common.Create;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -12,7 +12,8 @@ import java.util.List;
 @Getter
 @Setter
 @AllArgsConstructor
-@NoArgsConstructor
+@RequiredArgsConstructor
+@ToString
 public class ItemDto {
 
     private Integer id;
@@ -23,24 +24,19 @@ public class ItemDto {
     private String description;
     @NotNull(groups = {Create.class})
     private Boolean available;
-    private Integer request;
+    private Integer requestId;
     private ItemBookingDto nextBooking;
     private ItemBookingDto lastBooking;
     private List<CommentDto> comments;
 
     @Setter
     @Getter
+    @AllArgsConstructor
+    @ToString
     public static class ItemBookingDto {
         Integer id;
         LocalDateTime start;
         LocalDateTime end;
         Integer bookerId;
-
-        public ItemBookingDto(int id, LocalDateTime start, LocalDateTime end, int bookerId) {
-            this.id = id;
-            this.start = start;
-            this.end = end;
-            this.bookerId = bookerId;
-        }
     }
 }

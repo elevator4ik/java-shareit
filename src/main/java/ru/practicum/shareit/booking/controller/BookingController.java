@@ -1,18 +1,23 @@
 package ru.practicum.shareit.booking.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingInfoDto;
 import ru.practicum.shareit.booking.service.BookingService;
-import ru.practicum.shareit.marker.Create;
+import ru.practicum.shareit.common.Create;
+import ru.practicum.shareit.common.MyPageRequest;
 
+import javax.validation.constraints.Min;
 import java.util.List;
 
 @RestController
 @RequestMapping(path = "/bookings")
 @RequiredArgsConstructor
+@Validated
 public class BookingController {
     private final BookingService bookingService;
 
@@ -37,16 +42,23 @@ public class BookingController {
     }
 
     @GetMapping
-    public List<BookingDto> getUserBookings(@RequestHeader("X-Sharer-User-Id") int userId,
-                                            @RequestParam(name = "state",
-                                                    required = false, defaultValue = "ALL") String state) {
-        return bookingService.getBookings(userId, state, "user");
+    public List<BookingDto> getUserBookings(@RequestHeader("X-Sharer-User-Id") Integer userId,
+                                            @RequestParam(name = "from", defaultValue = "0") @Min(0) Integer from,
+                                            @RequestParam(name = "size", defaultValue = "1000") @Min(1) Integer size,
+                                            @RequestParam(name = "state",defaultValue = "ALL") String state) {
+        final PageRequest pageRequest = new MyPageRequest(from / size, size, Sort.by(
+                Sort.Direction.DESC, "startBooking"));
+        return bookingService.getBookings(userId, state, "user", pageRequest);
     }
 
     @GetMapping("/owner")
-    public List<BookingDto> getOwnerBookings(@RequestHeader("X-Sharer-User-Id") int userId,
+    public List<BookingDto> getOwnerBookings(@RequestHeader("X-Sharer-User-Id") Integer userId,
+                                             @RequestParam(name = "from", defaultValue = "0") @Min(0) Integer from,
+                                             @RequestParam(name = "size", defaultValue = "1000") @Min(1) Integer size,
                                              @RequestParam(name = "state",
                                                      defaultValue = "ALL") String state) {
-        return bookingService.getBookings(userId, state, "owner");
+        final PageRequest pageRequest = new MyPageRequest(from / size, size, Sort.by(
+                Sort.Direction.DESC, "startBooking"));
+        return bookingService.getBookings(userId, state, "owner", pageRequest);
     }
 }

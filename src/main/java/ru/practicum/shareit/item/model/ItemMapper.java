@@ -1,6 +1,5 @@
 package ru.practicum.shareit.item.model;
 
-import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.item.dto.CommentDto;
@@ -13,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@AllArgsConstructor
 public class ItemMapper {
 
     public Item toItem(ItemDto itemDto, User user) {
@@ -22,7 +20,7 @@ public class ItemMapper {
                 itemDto.getDescription(),
                 itemDto.getAvailable(),
                 user,
-                itemDto.getRequest());
+                itemDto.getRequestId());
     }
 
     public ItemDto toItemDto(Item item, List<Comment> comments, Booking nextBooking, Booking lastBooking) {
@@ -85,7 +83,7 @@ public class ItemMapper {
         }
     }
 
-    public List<CommentDto> toCommentDto(List<Comment> comment) {
+    private List<CommentDto> toCommentDto(List<Comment> comment) {
         List<CommentDto> commentsDto = new ArrayList<>();
         if (comment != null && !comment.isEmpty()) {
             for (Comment c : comment) {

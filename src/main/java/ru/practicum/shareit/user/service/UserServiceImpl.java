@@ -2,6 +2,7 @@ package ru.practicum.shareit.user.service;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.exception.NotFoundException;
@@ -11,6 +12,7 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.model.UserMapper;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -18,20 +20,16 @@ import java.util.List;
 @Slf4j
 public class UserServiceImpl implements UserService {
 
-    final UserRepository userRepository;
-    final UserMapper userMapper;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
     @Override
-    public List<UserDto> getUsers() {
+    public List<UserDto> getUsers(PageRequest pageRequest) {
 
-        log.info("Start to getting all users");
-
-        List<User> users = userRepository.findAll();
-        if (!users.isEmpty()) {
-            return userMapper.toUserDtoList(users);
-        } else {
-            throw new NotFoundException("Repository is empty");
-        }
+        return userRepository.findAll(pageRequest)
+                .stream()
+                .map(userMapper::toUserDto)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -80,6 +78,6 @@ public class UserServiceImpl implements UserService {
 
     private User getUserFromRepo(int id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User with id=" + id + " not found"));
     }
 }
