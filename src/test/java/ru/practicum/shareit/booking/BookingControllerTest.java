@@ -47,7 +47,12 @@ class BookingControllerTest {
     private final User user = new User(1, "test@email.ru", "Test name");
     private final User user1 = new User(2, "test1@email.ru", "Test1 name");
     private final Item item = new Item(
-            1, "Test Item", "Test description", Boolean.TRUE, user1, null);
+            1,
+            "Test Item",
+            "Test description",
+            Boolean.TRUE,
+            user1,
+            null);
     private final int from = 0;
     private final int size = 5;
     private final BookingInfoDto incomingDto = new BookingInfoDto(
