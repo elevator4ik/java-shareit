@@ -21,7 +21,7 @@ public class BookingController {
     public ResponseEntity<Object> createBooking(@RequestHeader("X-Sharer-User-Id") int userId,
                                                 @Validated({Create.class})
                                                 @RequestBody BookingInfoDto bookingDto) {
-        return bookingClient.addBooking(bookingDto, userId);
+        return bookingClient.addBooking(bookingDto.startEndCheck(bookingDto), userId);
     }
 
     @PatchMapping("/{bookingId}")

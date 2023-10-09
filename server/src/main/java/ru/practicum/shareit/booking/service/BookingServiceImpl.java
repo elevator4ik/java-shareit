@@ -41,32 +41,28 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingMapper.toBooking(bookingDto, userId, item);
         boolean crossingCheck = false;
 
-        if (booking.getEndBooking().isAfter(booking.getStartBooking())) {
-            if (userId != item.getOwner().getId()) {
-                for (Booking b : bookingRepository.findAllByItem(item)
-                        .stream()
-                        .filter(b -> b.getStatus().equals(BookingEnum.APPROVED))
-                        .collect(Collectors.toList())) {
-                    if (isBetween(b.getStartBooking(), booking.getStartBooking(), booking.getEndBooking()) ||
-                            isBetween(b.getEndBooking(), booking.getStartBooking(), booking.getEndBooking())) {
-                        crossingCheck = true;
-                        break;
-                    }
+        if (userId != item.getOwner().getId()) {
+            for (Booking b : bookingRepository.findAllByItem(item)
+                    .stream()
+                    .filter(b -> b.getStatus().equals(BookingEnum.APPROVED))
+                    .collect(Collectors.toList())) {
+                if (isBetween(b.getStartBooking(), booking.getStartBooking(), booking.getEndBooking()) ||
+                        isBetween(b.getEndBooking(), booking.getStartBooking(), booking.getEndBooking())) {
+                    crossingCheck = true;
+                    break;
                 }
-                if (crossingCheck) {
-                    throw new NotFoundException("Found a crossing of bookings.");
-                } else {
-                    booking.setBookerId(userId);
-                    booking.setStatus(BookingEnum.WAITING);
-
-                    return bookingMapper.toBookingDto(
-                            bookingRepository.saveAndFlush(booking), item, booker);
-                }
+            }
+            if (crossingCheck) {
+                throw new NotFoundException("Found a crossing of bookings.");
             } else {
-                throw new NotFoundException("Owner trying to booking item.");
+                booking.setBookerId(userId);
+                booking.setStatus(BookingEnum.WAITING);
+
+                return bookingMapper.toBookingDto(
+                        bookingRepository.saveAndFlush(booking), item, booker);
             }
         } else {
-            throw new BadRequestException("End time of booking is equals or before start time.");
+            throw new NotFoundException("Owner trying to booking item.");
         }
     }
 
