@@ -46,3 +46,13 @@ Java 11+, Spring Boot, JPA, PostgreSQL, REST API, Docker, JUnit, Lombok
 - GET /bookings/ - получение бронирований по фильтрам state, from, size
 - GET /bookings/owner - получение бронирований пользователя по фильтрам state, from, size
 <br>
+
+[Тесты Postman](https://github.com/yandex-praktikum/java-shareit/blob/add-docker/postman/sprint.json)
+
+### Иструкция по развертыванию
+* mvn clean package
+* mvn install
+* docker-compose build
+* docker-compose up -d
+* gateway: http://localhost:8080
+* основной сервис: http://localhost:9090
